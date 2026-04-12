@@ -39,6 +39,12 @@ func (s *Service) BuildReport(ctx context.Context, input string, noRDAP bool) (*
 		GeneratedAt: time.Now(),
 	}
 
+	if isSub {
+		r.SubdomainIPs = s.lookupHostIPs(ctx, input, false)
+	}
+
+	s.fetchDomainRecords(ctx, r)
+
 	if !noRDAP {
 		rdapInfo, err := s.rdap.LookupDomain(ctx, domain)
 		if err != nil {
@@ -48,11 +54,6 @@ func (s *Service) BuildReport(ctx context.Context, input string, noRDAP bool) (*
 		}
 	}
 
-	if isSub {
-		r.SubdomainIPs = s.lookupHostIPs(ctx, input, false)
-	}
-
-	s.fetchDomainRecords(ctx, r)
 	s.normalizeReport(r)
 	return r, nil
 }

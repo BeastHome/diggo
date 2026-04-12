@@ -7,6 +7,7 @@ import (
 	"net"
 	"sync"
 	"testing"
+	"time"
 
 	"diggo/internal/model"
 
@@ -24,7 +25,11 @@ type fakeDNS struct {
 	calls     []string
 }
 
-func (f *fakeDNS) Query(_ context.Context, name string, qtype uint16) (*dns.Msg, error) {
+func (f *fakeDNS) Query(ctx context.Context, name string, qtype uint16) (*dns.Msg, error) {
+	if err := ctxErr(ctx); err != nil {
+		return nil, err
+	}
+
 	key := dnsKey(name, qtype)
 
 	f.mu.Lock()
@@ -41,15 +46,30 @@ func (f *fakeDNS) Query(_ context.Context, name string, qtype uint16) (*dns.Msg,
 type fakeRDAP struct {
 	result *model.RDAPInfo
 	err    error
+	delay  time.Duration
 	calls  int
 }
 
-func (f *fakeRDAP) LookupDomain(_ context.Context, _ string) (*model.RDAPInfo, error) {
+func (f *fakeRDAP) LookupDomain(ctx context.Context, _ string) (*model.RDAPInfo, error) {
 	f.calls++
+	if f.delay > 0 {
+		select {
+		case <-time.After(f.delay):
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		}
+	}
 	if f.err != nil {
 		return nil, f.err
 	}
 	return f.result, nil
+}
+
+func ctxErr(ctx context.Context) error {
+	if ctx == nil {
+		return nil
+	}
+	return ctx.Err()
 }
 
 func TestBuildReport_PopulatesExpectedFields(t *testing.T) {
@@ -209,6 +229,41 @@ func TestBuildReport_SetsRDAPErrorOnFailure(t *testing.T) {
 	}
 	if report.RDAP != nil {
 		t.Fatalf("expected RDAP=nil on rdap failure")
+	}
+}
+
+func TestBuildReport_ResolvesDNSBeforeSlowRDAP(t *testing.T) {
+	dnsMock := &fakeDNS{responses: map[string]dnsResponse{
+		dnsKey("example.com", dns.TypeA):          {msg: msgWithAnswers(&dns.A{A: net.ParseIP("1.1.1.1")})},
+		dnsKey("example.com", dns.TypeSOA):        {msg: msgWithAnswers()},
+		dnsKey("example.com", dns.TypeNS):         {msg: msgWithAnswers()},
+		dnsKey("example.com", dns.TypeMX):         {msg: msgWithAnswers()},
+		dnsKey("example.com", dns.TypeTXT):        {msg: msgWithAnswers(&dns.TXT{Txt: []string{"v=spf1 -all"}})},
+		dnsKey("_dmarc.example.com", dns.TypeTXT): {msg: msgWithAnswers(&dns.TXT{Txt: []string{"v=DMARC1; p=none"}})},
+		dnsKey("example.com", dns.TypeCAA):        {msg: msgWithAnswers()},
+	}}
+	rdapMock := &fakeRDAP{delay: 200 * time.Millisecond}
+	svc := NewService(dnsMock, rdapMock)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 50*time.Millisecond)
+	defer cancel()
+
+	report, err := svc.BuildReport(ctx, "example.com", false)
+	if err != nil {
+		t.Fatalf("BuildReport returned error: %v", err)
+	}
+
+	if len(report.ARecords) != 1 || report.ARecords[0] != "1.1.1.1" {
+		t.Fatalf("expected A records to be resolved before RDAP timeout, got %+v", report.ARecords)
+	}
+	if len(report.SPFRecords) != 1 {
+		t.Fatalf("expected SPF record to be resolved before RDAP timeout, got %+v", report.SPFRecords)
+	}
+	if len(report.DMARCRecords) != 1 {
+		t.Fatalf("expected DMARC record to be resolved before RDAP timeout, got %+v", report.DMARCRecords)
+	}
+	if !report.RDAPError {
+		t.Fatalf("expected RDAPError=true when RDAP exceeds context deadline")
 	}
 }
 

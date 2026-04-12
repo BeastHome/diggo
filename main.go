@@ -102,7 +102,9 @@ var (
 	color           = flag.String("color", "", "Color mode: auto, always, or never")
 	theme           = flag.String("theme", "default", "Output theme: default, high-contrast, or minimal")
 	resolver        = flag.String("resolver", Resolver, "DNS resolver to use (host:port)")
-	timeout         = flag.String("timeout", "8s", "Query timeout duration (for example 8s, 1500ms)")
+	timeout         = flag.String("timeout", "8s", "Legacy fallback timeout for both DNS and RDAP when specific timeouts are not set")
+	dnsTimeout      = flag.String("dns-timeout", "", "DNS query timeout duration (for example 4s, 1200ms)")
+	rdapTimeout     = flag.String("rdap-timeout", "", "RDAP HTTP timeout duration (for example 8s, 2500ms)")
 	jsonOut         = flag.Bool("json", false, "Emit JSON report output")
 	compareResolver = flag.String("compare-resolver", "", "Optional secondary resolver for core-record comparison")
 	showVer         = flag.Bool("version", false, "Show version and exit")
@@ -137,15 +139,46 @@ Examples:
 /* Allows flags before OR after the domain */
 
 func normalizeArgs() {
+	argv := os.Args[1:]
 	var flags, args []string
-	for _, a := range os.Args[1:] {
-		if strings.HasPrefix(a, "-") {
-			flags = append(flags, a)
-		} else {
+	for i := 0; i < len(argv); i++ {
+		a := argv[i]
+		if !strings.HasPrefix(a, "-") {
 			args = append(args, a)
+			continue
 		}
+
+		flags = append(flags, a)
+		if strings.Contains(a, "=") || isBoolFlagToken(a) {
+			continue
+		}
+		if i+1 >= len(argv) {
+			continue
+		}
+		next := argv[i+1]
+		if strings.HasPrefix(next, "-") {
+			continue
+		}
+		flags = append(flags, next)
+		i++
 	}
 	os.Args = append([]string{os.Args[0]}, append(flags, args...)...)
+}
+
+func isBoolFlagToken(token string) bool {
+	name := strings.TrimLeft(token, "-")
+	if idx := strings.Index(name, "="); idx >= 0 {
+		name = name[:idx]
+	}
+	f := flag.CommandLine.Lookup(name)
+	if f == nil {
+		return false
+	}
+	type boolFlag interface {
+		IsBoolFlag() bool
+	}
+	b, ok := f.Value.(boolFlag)
+	return ok && b.IsBoolFlag()
 }
 
 func parseDomainArg() (string, error) {
@@ -198,18 +231,25 @@ func main() {
 		os.Exit(1)
 	}
 
-	queryTimeout, err := time.ParseDuration(*timeout)
-	if err != nil || queryTimeout <= 0 {
-		fmt.Fprintln(os.Stderr, "invalid timeout; use a positive duration like 8s")
+	dnsQueryTimeout, err := parseDurationWithFallback(*dnsTimeout, *timeout)
+	if err != nil || dnsQueryTimeout <= 0 {
+		fmt.Fprintln(os.Stderr, "invalid dns-timeout; use a positive duration like 4s")
 		flag.Usage()
 		os.Exit(2)
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), queryTimeout)
+	rdapQueryTimeout, err := parseDurationWithFallback(*rdapTimeout, *timeout)
+	if err != nil || rdapQueryTimeout <= 0 {
+		fmt.Fprintln(os.Stderr, "invalid rdap-timeout; use a positive duration like 8s")
+		flag.Usage()
+		os.Exit(2)
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	dnsClient := dnsx.NewClient(*resolver, queryTimeout)
-	rdapClient := rdap.NewClient(queryTimeout)
+	dnsClient := dnsx.NewClient(*resolver, dnsQueryTimeout)
+	rdapClient := rdap.NewClient(rdapQueryTimeout)
 	service := app.NewService(dnsClient, rdapClient)
 
 	report, err := service.BuildReport(ctx, input, *noRDAP)
@@ -219,7 +259,7 @@ func main() {
 	}
 
 	if strings.TrimSpace(*compareResolver) != "" {
-		cmpDNS := dnsx.NewClient(*compareResolver, queryTimeout)
+		cmpDNS := dnsx.NewClient(*compareResolver, dnsQueryTimeout)
 		cmpService := app.NewService(cmpDNS, rdapClient)
 		cmpReport, cmpErr := cmpService.BuildReport(ctx, input, true)
 		if cmpErr != nil {
@@ -271,4 +311,12 @@ func main() {
 	default:
 		output.PrintReport(report)
 	}
+}
+
+func parseDurationWithFallback(value string, fallback string) (time.Duration, error) {
+	chosen := strings.TrimSpace(value)
+	if chosen == "" {
+		chosen = strings.TrimSpace(fallback)
+	}
+	return time.ParseDuration(chosen)
 }
