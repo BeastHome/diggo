@@ -1,0 +1,23 @@
+RDAP:
+ RDAP lookup failed.
+
+Core Records:
+ Domain: example.com
+ Nameservers: (none)
+ A/AAAA: (none)
+ MX: (none)
+ SPF: MISSING
+ DMARC: MISSING
+ CAA: MISSING
+ TXT: (none)
+
+DNS for example.com
+
+A record(s):
+
+Nameservers:
+
+MX:
+
+CAA:
+ There are no CAA records defined.

@@ -1,0 +1,50 @@
+<ESC>[34mRDAP:<ESC>[0m
+ Domain: example.com
+ Handle: H-1
+ expiration: 2030-01-01T00:00:00Z
+<ESC>[1m<ESC>[33m ⚠ Domain expires within 30 days<ESC>[0m
+
+<ESC>[34mCore Records:<ESC>[0m
+ Domain: <ESC>[35mexample.com<ESC>[0m
+ Nameservers: <ESC>[35mns1.example.com.<ESC>[0m: <ESC>[33m2.2.2.2<ESC>[0m
+ A/AAAA: <ESC>[33m1.1.1.1<ESC>[0m
+ MX: <ESC>[35mmx1.example.com.<ESC>[0m (pref 10)
+ SPF: <ESC>[32mOK<ESC>[0m
+ DMARC: <ESC>[32mOK<ESC>[0m
+ CAA: <ESC>[32mOK<ESC>[0m
+ TXT:
+  site-verification=abc123
+  v=spf1 include:_spf.example.com ~all
+  v=DMARC1; p=none
+
+<ESC>[34mSubdomain A/AAAA:<ESC>[0m
+  <ESC>[33m9.9.9.9<ESC>[0m
+
+<ESC>[36mDNS for <ESC>[35mexample.com<ESC>[0m<ESC>[0m
+
+<ESC>[34mA record(s):<ESC>[0m
+<ESC>[33m1.1.1.1<ESC>[0m
+
+<ESC>[34mSOA:<ESC>[0m
+ serial=123 tech=tech.example.com. mname=ns1.example.com.
+ refresh=10 retry=20 expire=30 minimum=40
+
+<ESC>[34mNameservers:<ESC>[0m
+<ESC>[35mns1.example.com.<ESC>[0m
+  <ESC>[33m2.2.2.2<ESC>[0m
+
+<ESC>[34mMX:<ESC>[0m
+ Host <ESC>[35mmx1.example.com.<ESC>[0m preference 10
+  <ESC>[33m3.3.3.3<ESC>[0m PTR:<ESC>[35mptr1.example.com.<ESC>[0m PTR:<ESC>[35mptr2.example.com.<ESC>[0m
+
+<ESC>[34mTXT:<ESC>[0m
+site-verification=abc123
+
+<ESC>[34mSPF:<ESC>[0m
+v=spf1 include:_spf.example.com ~all
+
+<ESC>[34mDMARC:<ESC>[0m
+v=DMARC1; p=none
+
+<ESC>[34mCAA:<ESC>[0m
+issue letsencrypt.org

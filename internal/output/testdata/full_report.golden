@@ -1,0 +1,50 @@
+RDAP:
+ Domain: example.com
+ Handle: H-1
+ expiration: 2030-01-01T00:00:00Z
+ ⚠ Domain expires within 30 days
+
+Core Records:
+ Domain: example.com
+ Nameservers: ns1.example.com.: 2.2.2.2
+ A/AAAA: 1.1.1.1
+ MX: mx1.example.com. (pref 10)
+ SPF: OK
+ DMARC: OK
+ CAA: OK
+ TXT:
+  site-verification=abc123
+  v=spf1 include:_spf.example.com ~all
+  v=DMARC1; p=none
+
+Subdomain A/AAAA:
+  9.9.9.9
+
+DNS for example.com
+
+A record(s):
+1.1.1.1
+
+SOA:
+ serial=123 tech=tech.example.com. mname=ns1.example.com.
+ refresh=10 retry=20 expire=30 minimum=40
+
+Nameservers:
+ns1.example.com.
+  2.2.2.2
+
+MX:
+ Host mx1.example.com. preference 10
+  3.3.3.3 PTR:ptr1.example.com. PTR:ptr2.example.com.
+
+TXT:
+site-verification=abc123
+
+SPF:
+v=spf1 include:_spf.example.com ~all
+
+DMARC:
+v=DMARC1; p=none
+
+CAA:
+issue letsencrypt.org
