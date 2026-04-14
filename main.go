@@ -143,24 +143,23 @@ func normalizeArgs() {
 	var flags, args []string
 	for i := 0; i < len(argv); i++ {
 		a := argv[i]
-		if !strings.HasPrefix(a, "-") {
+		if strings.HasPrefix(a, "-") {
+			flags = append(flags, a)
+			if strings.Contains(a, "=") || isBoolFlagToken(a) {
+				continue
+			}
+			if i+1 < len(argv) && !strings.HasPrefix(argv[i+1], "-") {
+				flags = append(flags, argv[i+1])
+				i++
+			}
+		} else {
 			args = append(args, a)
-			continue
 		}
-
-		flags = append(flags, a)
-		if strings.Contains(a, "=") || isBoolFlagToken(a) {
-			continue
-		}
-		if i+1 >= len(argv) {
-			continue
-		}
-		next := argv[i+1]
-		if strings.HasPrefix(next, "-") {
-			continue
-		}
-		flags = append(flags, next)
-		i++
+	}
+	// Only allow one domain argument, error if more than one
+	if len(args) > 1 {
+		fmt.Fprintln(os.Stderr, "too many arguments (only one domain allowed)")
+		os.Exit(1)
 	}
 	os.Args = append([]string{os.Args[0]}, append(flags, args...)...)
 }
