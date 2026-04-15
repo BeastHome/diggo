@@ -14,41 +14,22 @@ Thumbs.db
 !.vscode/launch.json
 
 # --------------------
-# Build / output
-# --------------------
-bin/
-obj/
-build/
-out/
-
-# --------------------
 # Logs
 # --------------------
 *.log
 
 # --------------------
-# Python
-# --------------------
-__pycache__/
-*.py[cod]
-*.pyo
-*.pyd
-
-# Virtual environments (never commit)
-.venv/
-venv/
-env/
-
-# Packaging
-dist/
-build/
-*.egg-info/
-requirements.txt
-pyproject.toml
-
-# --------------------
 # Go
 # --------------------
-*.exe
+# Compiled binaries
+diggo
+diggo.exe
 *.test
 *.out
+
+# Dependency vendor directory (if used)
+vendor/
+
+# Build output directories
+bin/
+dist/
