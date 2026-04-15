@@ -98,3 +98,56 @@ func TestClientQuery_UsesTCPWhenUDPTruncated(t *testing.T) {
 		t.Fatalf("expected successful TCP response, got %+v", resp)
 	}
 }
+
+func TestClientQuery_PreferTCPSucceedsWithoutUDP(t *testing.T) {
+	client := NewClient("1.1.1.1:53", time.Second)
+	client.PreferTCP = true
+	var udpCalls, tcpCalls int
+	client.udpQuery = func(_ context.Context, _ *dns.Msg, _ string) (*dns.Msg, time.Duration, error) {
+		udpCalls++
+		return &dns.Msg{MsgHdr: dns.MsgHdr{Rcode: dns.RcodeSuccess}}, 0, nil
+	}
+	client.tcpQuery = func(_ context.Context, _ *dns.Msg, _ string) (*dns.Msg, time.Duration, error) {
+		tcpCalls++
+		return &dns.Msg{MsgHdr: dns.MsgHdr{Rcode: dns.RcodeSuccess}}, 0, nil
+	}
+
+	resp, err := client.Query(context.Background(), "example.com", dns.TypeA)
+	if err != nil {
+		t.Fatalf("Query returned error: %v", err)
+	}
+	if tcpCalls != 1 {
+		t.Fatalf("expected exactly 1 TCP call, got %d", tcpCalls)
+	}
+	if udpCalls != 0 {
+		t.Fatalf("expected 0 UDP calls when TCP succeeded, got %d", udpCalls)
+	}
+	if resp == nil || resp.Rcode != dns.RcodeSuccess {
+		t.Fatalf("expected successful response, got %+v", resp)
+	}
+}
+
+func TestClientQuery_PreferTCPFallsBackToUDPOnTransportError(t *testing.T) {
+	client := NewClient("1.1.1.1:53", time.Second)
+	client.PreferTCP = true
+	var udpCalls, tcpCalls int
+	client.tcpQuery = func(_ context.Context, _ *dns.Msg, _ string) (*dns.Msg, time.Duration, error) {
+		tcpCalls++
+		return nil, 0, errors.New("tcp: connection refused")
+	}
+	client.udpQuery = func(_ context.Context, _ *dns.Msg, _ string) (*dns.Msg, time.Duration, error) {
+		udpCalls++
+		return &dns.Msg{MsgHdr: dns.MsgHdr{Rcode: dns.RcodeSuccess}}, 0, nil
+	}
+
+	resp, err := client.Query(context.Background(), "example.com", dns.TypeA)
+	if err != nil {
+		t.Fatalf("Query returned error: %v", err)
+	}
+	if udpCalls == 0 {
+		t.Fatalf("expected UDP fallback when TCP transport fails")
+	}
+	if resp == nil || resp.Rcode != dns.RcodeSuccess {
+		t.Fatalf("expected successful UDP response, got %+v", resp)
+	}
+}

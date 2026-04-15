@@ -16,11 +16,12 @@ const (
 )
 
 type Client struct {
-	resolver string
-	udp      dns.Client
-	tcp      dns.Client
-	udpQuery func(ctx context.Context, msg *dns.Msg, resolver string) (*dns.Msg, time.Duration, error)
-	tcpQuery func(ctx context.Context, msg *dns.Msg, resolver string) (*dns.Msg, time.Duration, error)
+	resolver  string
+	PreferTCP bool
+	udp       dns.Client
+	tcp       dns.Client
+	udpQuery  func(ctx context.Context, msg *dns.Msg, resolver string) (*dns.Msg, time.Duration, error)
+	tcpQuery  func(ctx context.Context, msg *dns.Msg, resolver string) (*dns.Msg, time.Duration, error)
 }
 
 func NewClient(resolver string, timeout time.Duration) *Client {
@@ -39,6 +40,27 @@ func (c *Client) Query(ctx context.Context, name string, qtype uint16) (*dns.Msg
 	for attempt := 1; attempt <= maxQueryAttempts; attempt++ {
 		msg := new(dns.Msg)
 		msg.SetQuestion(dns.Fqdn(name), qtype)
+
+		if c.PreferTCP {
+			r, _, err := c.tcpQuery(ctx, msg, c.resolver)
+			if err != nil {
+				if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
+					return nil, err
+				}
+				lastErr = err
+				// TCP failed at transport level — fall through to UDP this attempt
+			} else if r != nil {
+				if shouldRetry(nil, r, attempt, ctx) {
+					lastErr = fmt.Errorf("dns rcode: %s", dns.RcodeToString[r.Rcode])
+					if waitErr := sleepWithContext(ctx, backoffDelay(attempt)); waitErr != nil {
+						return nil, waitErr
+					}
+					continue
+				}
+				return r, nil
+			}
+			// TCP returned nil or transport error — fall through to UDP
+		}
 
 		r, _, err := c.udpQuery(ctx, msg, c.resolver)
 		if err != nil {

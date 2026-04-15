@@ -79,7 +79,10 @@ func (s *Service) fetchDomainRecords(ctx context.Context, r *model.Report) {
 		{kind: "caa", name: r.Domain, qtype: dns.TypeCAA},
 	}
 
+	const maxConcurrentDNS = 3
+
 	ch := make(chan result, len(queries))
+	sem := make(chan struct{}, maxConcurrentDNS)
 	var wg sync.WaitGroup
 
 	for _, q := range queries {
@@ -87,7 +90,9 @@ func (s *Service) fetchDomainRecords(ctx context.Context, r *model.Report) {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
+			sem <- struct{}{}
 			msg, err := s.dns.Query(ctx, q.name, q.qtype)
+			<-sem
 			ch <- result{kind: q.kind, msg: msg, err: err}
 		}()
 	}

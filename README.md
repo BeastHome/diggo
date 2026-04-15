@@ -34,6 +34,7 @@ diggo example.com --compare-resolver 8.8.8.8:53
 | `--core` | false | Show core records summary only |
 | `--full` | false | Show full output including core records |
 | `--json` | false | Emit JSON report output |
+| `--prefer-tcp` | false | Use TCP for DNS queries (recommended on VPNs that block or intercept UDP port 53) |
 | `--color` | auto | Color mode: `auto`, `always`, or `never` |
 | `--theme` | default | Output theme: `default`, `high-contrast`, or `minimal` |
 | `--resolver` | 1.1.1.1:53 | DNS resolver to use (host:port) |

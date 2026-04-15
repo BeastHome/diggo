@@ -110,6 +110,7 @@ var (
 	showVer         = flag.Bool("version", false, "Show version and exit")
 	coreOnly        = flag.Bool("core", false, "Show core records summary only")
 	fullOut         = flag.Bool("full", false, "Show full output including core records")
+	preferTCP       = flag.Bool("prefer-tcp", false, "Use TCP for DNS queries (recommended on VPNs that block or intercept UDP port 53)")
 )
 
 func init() {
@@ -248,6 +249,7 @@ func main() {
 	defer cancel()
 
 	dnsClient := dnsx.NewClient(*resolver, dnsQueryTimeout)
+	dnsClient.PreferTCP = *preferTCP
 	rdapClient := rdap.NewClient(rdapQueryTimeout)
 	service := app.NewService(dnsClient, rdapClient)
 
@@ -259,6 +261,7 @@ func main() {
 
 	if strings.TrimSpace(*compareResolver) != "" {
 		cmpDNS := dnsx.NewClient(*compareResolver, dnsQueryTimeout)
+		cmpDNS.PreferTCP = *preferTCP
 		cmpService := app.NewService(cmpDNS, rdapClient)
 		cmpReport, cmpErr := cmpService.BuildReport(ctx, input, true)
 		if cmpErr != nil {
