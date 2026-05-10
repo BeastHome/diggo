@@ -53,3 +53,11 @@ go build -o diggo.exe .
 ## Notes
 - Pre-commit hook is wired via `.githooks/pre-commit` (`core.hookspath=.githooks`). Run `git config core.hookspath .githooks` on fresh clones if not already set.
 - Version metadata is embedded from `metadata.json` at build time.
+
+## Project Docs
+
+- [CHARTER.md](CHARTER.md)
+- [SEMANTIC_DECISIONS.md](SEMANTIC_DECISIONS.md)
+- [IMPLEMENTATION_ROADMAP.md](IMPLEMENTATION_ROADMAP.md)
+- [OUTPUT_CONTRACT.md](OUTPUT_CONTRACT.md)
+- [CHANGELOG.md](CHANGELOG.md)
