@@ -1,7 +1,7 @@
 # diggo
 
 ## Overview
-`diggo` is a dig-like DNS inspection tool written in Go. It queries DNS records (A, MX, TXT, NS, CNAME, SOA, and more), fetches RDAP domain metadata, performs subdomain detection, and surfaces expiration warnings — all in a single command. Designed for quick, copy-friendly output on Windows hosting environments.
+`diggo` is a dig-like DNS inspection tool written in Go. It queries DNS records (A/AAAA, SOA, NS, MX, TXT, SPF, DMARC, CAA), fetches RDAP domain metadata, performs subdomain detection, and surfaces expiration warnings — all in a single command. Designed for quick, copy-friendly output on Windows hosting environments.
 
 ## Status
 - Lifecycle: stable
@@ -43,6 +43,16 @@ diggo example.com --compare-resolver 8.8.8.8:53
 | `--dns-timeout` | — | DNS-specific timeout (e.g. `4s`, `1200ms`) |
 | `--rdap-timeout` | — | RDAP-specific timeout (e.g. `8s`, `2500ms`) |
 | `--version` | — | Show version and exit |
+
+**Color control:**
+
+The `--color` flag takes precedence when set. Otherwise color is resolved from the environment, in this order:
+
+- `NO_COLOR` set to any value — disables color.
+- `CLICOLOR_FORCE` set to a non-zero value — forces color on.
+- `CLICOLOR=0` — disables color.
+- `TERM=dumb` — disables color.
+- Otherwise color is automatic (enabled only when stdout is an interactive terminal).
 
 ## Build
 

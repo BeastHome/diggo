@@ -31,8 +31,10 @@ This roadmap is a retroactive snapshot of completed work plus plausible next ste
 - [x] Resolver comparison mode for core-record cross-checking.
 - [x] Deterministic sorting and deduplication for stable outputs.
 
-## Phase 6 - Next Improvements (planned)
+## Phase 6 - Domain Parsing Refinements (completed)
+- [x] Base-domain resolution via the Public Suffix List so multi-label public suffixes (e.g. example.com.tr, example.co.uk) are treated as registrable domains rather than subdomains.
+
+## Phase 7 - Next Improvements (planned)
 - [ ] Expand output contract examples for each mode (default/full/json/compare).
 - [ ] Add structured error codes for automation-friendly failure handling.
 - [ ] Add optional query tracing or debug mode (timings, retries, transport path).
-- [ ] Evaluate broader domain parsing rules for multi-part public suffixes.

@@ -15,7 +15,7 @@ Provide fast, practical DNS and RDAP inspection in a single command with output 
 - Keep network behavior explicit via resolver and timeout flags.
 
 ## Current Scope (v2.x)
-- DNS queries for A/AAAA, SOA, NS, MX, TXT, SPF, DMARC, CAA.
+- DNS queries across the standard record set defined in [OUTPUT_CONTRACT.md](OUTPUT_CONTRACT.md).
 - Optional RDAP domain metadata lookup with expiration warnings.
 - Subdomain detection and subdomain A/AAAA reporting.
 - Core summary mode, full mode, and JSON output mode.
