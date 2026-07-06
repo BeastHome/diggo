@@ -11,6 +11,9 @@ This document captures behavior choices for diggo and the rationale behind them.
 - Status: accepted
 - Decision: Arguments are normalized so positional domain can be supplied flexibly.
 - Rationale: Improves shell ergonomics without changing final parse rules.
+- Note: A value-expecting flag supplied without its value (e.g. `diggo example.com --resolver`)
+  lets the standard flag parser consume the domain as the flag value, surfacing as
+  "no domain provided". This is treated as user error, consistent with stdlib flag behavior.
 
 ## SD-003: DNS and RDAP timeouts are independently configurable
 - Status: accepted

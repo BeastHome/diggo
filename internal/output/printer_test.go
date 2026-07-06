@@ -122,6 +122,32 @@ func TestPrintReport_RDAPUnavailableGolden(t *testing.T) {
 	assertGolden(t, "rdap_unavailable.golden", got)
 }
 
+func TestPrintCore_TXTSingleRecordInline(t *testing.T) {
+	report := &model.Report{
+		Domain:     "example.com",
+		TXTRecords: []string{"only-one"},
+	}
+
+	got := capturePrintReport(t, report, false)
+	if !strings.Contains(got, " TXT: only-one\n") {
+		t.Fatalf("expected single TXT record inline, got:\n%s", got)
+	}
+}
+
+func TestPrintCore_TXTTruncationTail(t *testing.T) {
+	report := &model.Report{
+		Domain:     "example.com",
+		TXTRecords: []string{"t1", "t2", "t3", "t4"},
+		SPFRecords: []string{"v=spf1 -all"},
+	}
+
+	got := capturePrintReport(t, report, false)
+	want := " TXT:\n  t1\n  t2\n  t3\n  ... (5 total records)\n"
+	if !strings.Contains(got, want) {
+		t.Fatalf("expected TXT block capped at 3 with total count, got:\n%s", got)
+	}
+}
+
 func TestPrintReport_CoreNameserversStacked(t *testing.T) {
 	report := &model.Report{
 		Domain: "example.com",

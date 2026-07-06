@@ -97,9 +97,8 @@ func (p *Printer) hostname(s string) string { return p.style(styleHost, s) }
 func (p *Printer) ipaddr(s string) string   { return p.style(styleIP, s) }
 func (p *Printer) txtval(s string) string   { return p.style(styleValue, s) }
 
-func (p *Printer) okLabel(s string) string    { return p.style(styleOK, s) }
-func (p *Printer) warnLabel(s string) string  { return p.style(styleWarn, s) }
-func (p *Printer) errorLabel(s string) string { return p.style(styleError, s) }
+func (p *Printer) okLabel(s string) string   { return p.style(styleOK, s) }
+func (p *Printer) warnLabel(s string) string { return p.style(styleWarn, s) }
 
 func PrintReport(r *model.Report) {
 	NewPrinterWithTheme(os.Stdout, defaultUseColor, defaultThemeName).PrintReport(r)
@@ -228,13 +227,13 @@ func (p *Printer) printReport(r *model.Report, includeCore bool) {
 func (p *Printer) printCoreRecords(r *model.Report) {
 	p.header("Core Records:")
 	fmt.Fprintln(p.w, " Domain:", p.hostname(r.Domain))
-	p.printCoreNameservers(r)
+	p.printCoreList("Nameservers", p.renderNameserverLines(r), len(r.Nameservers))
 	fmt.Fprintln(p.w, " A/AAAA:", p.renderARecords(r))
-	p.printCoreMX(r)
+	p.printCoreList("MX", p.renderMXLines(r), len(r.MXRecords))
 	fmt.Fprintln(p.w, " SPF:", p.healthStatus(len(r.SPFRecords) > 0))
 	fmt.Fprintln(p.w, " DMARC:", p.healthStatus(len(r.DMARCRecords) > 0))
 	fmt.Fprintln(p.w, " CAA:", p.healthStatus(len(r.CAARecords) > 0 && !r.NoCAA))
-	p.printCoreTXT(r)
+	p.printCoreList("TXT", p.renderTXTLines(r), len(r.TXTRecords)+len(r.SPFRecords)+len(r.DMARCRecords))
 }
 
 func (p *Printer) healthStatus(ok bool) string {
@@ -244,40 +243,43 @@ func (p *Printer) healthStatus(ok bool) string {
 	return p.warnLabel("MISSING")
 }
 
-func (p *Printer) renderNameservers(r *model.Report) string {
-	if len(r.Nameservers) == 0 {
-		return "(none)"
+// printCoreList renders one labeled Core Records block. An empty list prints
+// " label: (none)"; when total is 1 the single line prints inline as
+// " label: line"; otherwise the lines print under the label, each indented.
+// When total exceeds len(lines) the list was truncated and a
+// "... (N total records)" summary is appended.
+func (p *Printer) printCoreList(label string, lines []string, total int) {
+	if len(lines) == 0 {
+		fmt.Fprintf(p.w, " %s: (none)\n", label)
+		return
 	}
-	parts := make([]string, 0, len(r.Nameservers))
+	if total <= 1 {
+		fmt.Fprintf(p.w, " %s: %s\n", label, lines[0])
+		return
+	}
+	fmt.Fprintf(p.w, " %s:\n", label)
+	for _, line := range lines {
+		fmt.Fprintf(p.w, "  %s\n", line)
+	}
+	if total > len(lines) {
+		fmt.Fprintf(p.w, "  ... (%d total records)\n", total)
+	}
+}
+
+func (p *Printer) renderNameserverLines(r *model.Report) []string {
+	lines := make([]string, 0, len(r.Nameservers))
 	for _, ns := range r.Nameservers {
 		ips := make([]string, 0, len(ns.IPs))
 		for _, ip := range ns.IPs {
 			ips = append(ips, p.ipaddr(ip.IP))
 		}
 		if len(ips) == 0 {
-			parts = append(parts, fmt.Sprintf("%s: (none)", p.hostname(ns.Host)))
+			lines = append(lines, fmt.Sprintf("%s: (none)", p.hostname(ns.Host)))
 			continue
 		}
-		parts = append(parts, fmt.Sprintf("%s: %s", p.hostname(ns.Host), strings.Join(ips, ", ")))
+		lines = append(lines, fmt.Sprintf("%s: %s", p.hostname(ns.Host), strings.Join(ips, ", ")))
 	}
-	return strings.Join(parts, "\n")
-}
-
-func (p *Printer) printCoreNameservers(r *model.Report) {
-	ns := p.renderNameservers(r)
-	if ns == "(none)" {
-		fmt.Fprintln(p.w, " Nameservers:", ns)
-		return
-	}
-	lines := strings.Split(ns, "\n")
-	if len(lines) == 1 {
-		fmt.Fprintln(p.w, " Nameservers:", lines[0])
-		return
-	}
-	fmt.Fprintln(p.w, " Nameservers:")
-	for _, line := range lines {
-		fmt.Fprintf(p.w, "  %s\n", line)
-	}
+	return lines
 }
 
 func (p *Printer) renderARecords(r *model.Report) string {
@@ -291,38 +293,18 @@ func (p *Printer) renderARecords(r *model.Report) string {
 	return strings.Join(parts, ", ")
 }
 
-func (p *Printer) renderMXRecords(r *model.Report) string {
-	if len(r.MXRecords) == 0 {
-		return "(none)"
-	}
-	parts := make([]string, 0, len(r.MXRecords))
+func (p *Printer) renderMXLines(r *model.Report) []string {
+	lines := make([]string, 0, len(r.MXRecords))
 	for _, mx := range r.MXRecords {
-		parts = append(parts, fmt.Sprintf("%s (pref %d)", p.hostname(mx.Host), mx.Preference))
+		lines = append(lines, fmt.Sprintf("%s (pref %d)", p.hostname(mx.Host), mx.Preference))
 	}
-	if len(parts) == 1 {
-		return parts[0]
-	}
-	return strings.Join(parts, "\n")
+	return lines
 }
 
-func (p *Printer) printCoreMX(r *model.Report) {
-	mx := p.renderMXRecords(r)
-	if mx == "(none)" {
-		fmt.Fprintln(p.w, " MX:", mx)
-		return
-	}
-	lines := strings.Split(mx, "\n")
-	if len(lines) == 1 {
-		fmt.Fprintln(p.w, " MX:", lines[0])
-		return
-	}
-	fmt.Fprintln(p.w, " MX:")
-	for _, line := range lines {
-		fmt.Fprintf(p.w, "  %s\n", line)
-	}
-}
-
-func (p *Printer) renderTXTRecords(r *model.Report) string {
+// renderTXTLines returns the combined TXT/SPF/DMARC values for the Core Records
+// block, capped at 3 entries. The full count is tracked separately by the
+// caller so printCoreList can note how many records were elided.
+func (p *Printer) renderTXTLines(r *model.Report) []string {
 	items := make([]string, 0, len(r.TXTRecords)+len(r.SPFRecords)+len(r.DMARCRecords))
 	for _, txt := range r.TXTRecords {
 		items = append(items, p.txtval(txt))
@@ -333,34 +315,10 @@ func (p *Printer) renderTXTRecords(r *model.Report) string {
 	for _, dmarc := range r.DMARCRecords {
 		items = append(items, p.txtval(dmarc))
 	}
-	if len(items) == 0 {
-		return "(none)"
-	}
 	if len(items) > 3 {
 		items = items[:3]
 	}
-	return strings.Join(items, "\n")
-}
-
-func (p *Printer) printCoreTXT(r *model.Report) {
-	txt := p.renderTXTRecords(r)
-	count := len(r.TXTRecords) + len(r.SPFRecords) + len(r.DMARCRecords)
-	if txt == "(none)" {
-		fmt.Fprintln(p.w, " TXT:", txt)
-		return
-	}
-	lines := strings.Split(txt, "\n")
-	if count == 1 {
-		fmt.Fprintln(p.w, " TXT:", lines[0])
-	} else {
-		fmt.Fprintln(p.w, " TXT:")
-		for _, line := range lines {
-			fmt.Fprintf(p.w, "  %s\n", line)
-		}
-		if count > 3 {
-			fmt.Fprintf(p.w, "  ... (%d total records)\n", count)
-		}
-	}
+	return items
 }
 
 func (p *Printer) printIPResults(items []model.IPResult, withPTR bool) {

@@ -139,6 +139,12 @@ Examples:
 /* ---------------- Argument normalization ---------------- */
 /* Allows flags before OR after the domain */
 
+// normalizeArgs reorders argv so flags may appear before or after the positional
+// domain (see SD-002). Known limitation: a value-expecting flag given without its
+// value (e.g. "diggo example.com --resolver") lets the standard flag parser
+// consume the domain as that flag's value, after which parseDomainArg reports
+// "no domain provided". This matches stdlib flag behavior and is treated as user
+// error rather than special-cased.
 func normalizeArgs() {
 	argv := os.Args[1:]
 	var flags, args []string
@@ -290,7 +296,12 @@ func main() {
 			return
 		}
 
-		output.PrintFull(report)
+		// Comparison output defaults to full context; honor --core when requested.
+		if *coreOnly {
+			output.PrintCoreOnly(report)
+		} else {
+			output.PrintFull(report)
+		}
 		output.PrintComparison(*resolver, *compareResolver, report, cmpReport)
 		return
 	}
