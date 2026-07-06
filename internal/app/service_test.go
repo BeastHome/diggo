@@ -276,6 +276,15 @@ func TestSplitDomain(t *testing.T) {
 	}{
 		{name: "root domain", input: "example.com", want: "example.com", wantIsSub: false},
 		{name: "subdomain", input: "mail.example.com", want: "example.com", wantIsSub: true},
+		{name: "multi-label tld base", input: "example.com.tr", want: "example.com.tr", wantIsSub: false},
+		{name: "multi-label tld subdomain", input: "mail.example.com.tr", want: "example.com.tr", wantIsSub: true},
+		{name: "multi-label tld deep subdomain", input: "a.b.example.com.tr", want: "example.com.tr", wantIsSub: true},
+		{name: "co.uk base", input: "example.co.uk", want: "example.co.uk", wantIsSub: false},
+		{name: "co.uk subdomain", input: "www.example.co.uk", want: "example.co.uk", wantIsSub: true},
+		{name: "trailing dot", input: "example.com.", want: "example.com", wantIsSub: false},
+		{name: "mixed case normalized", input: "Mail.Example.COM", want: "example.com", wantIsSub: true},
+		{name: "bare public suffix", input: "com.tr", want: "com.tr", wantIsSub: false},
+		{name: "single label", input: "localhost", want: "localhost", wantIsSub: false},
 	}
 
 	for _, tc := range tests {

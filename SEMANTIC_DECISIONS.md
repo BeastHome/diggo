@@ -31,6 +31,10 @@ This document captures behavior choices for diggo and the rationale behind them.
 - Status: accepted
 - Decision: Input is split into base domain and subdomain indicator; subdomain A/AAAA is shown separately.
 - Rationale: Keeps report sections understandable when querying hostnames instead of bare domains.
+- Note: The base domain is resolved as the registrable domain (eTLD+1) using the
+  Public Suffix List, so multi-label public suffixes such as `com.tr` and `co.uk`
+  are handled correctly — `example.com.tr` is a base domain, while
+  `mail.example.com.tr` is a subdomain of `example.com.tr`.
 
 ## SD-007: Record lists are normalized before rendering
 - Status: accepted

@@ -11,6 +11,7 @@ import (
 	"diggo/internal/model"
 
 	"github.com/miekg/dns"
+	"golang.org/x/net/publicsuffix"
 )
 
 type DNSResolver interface {
@@ -231,12 +232,27 @@ func (s *Service) lookupPTR(ctx context.Context, ip string) []string {
 	return ptrs
 }
 
+// splitDomain resolves the registrable base domain (eTLD+1) for an input host
+// and reports whether the input is a subdomain of that base. It uses the Public
+// Suffix List so multi-label public suffixes such as "com.tr" or "co.uk" are
+// recognized: "example.com.tr" is a base domain, while "mail.example.com.tr" is
+// a subdomain of "example.com.tr".
 func splitDomain(name string) (string, bool) {
-	parts := strings.Split(name, ".")
-	if len(parts) <= 2 {
+	host := strings.ToLower(strings.TrimSuffix(strings.TrimSpace(name), "."))
+	if host == "" {
 		return name, false
 	}
-	return strings.Join(parts[len(parts)-2:], "."), true
+
+	base, err := publicsuffix.EffectiveTLDPlusOne(host)
+	if err != nil {
+		// No registrable eTLD+1 exists for the input: it is itself a public
+		// suffix (for example "com.tr"), a single label ("localhost"), or
+		// otherwise unsplittable. Treat the normalized host as the base with
+		// no subdomain context.
+		return host, false
+	}
+
+	return base, host != base
 }
 
 func (s *Service) normalizeReport(r *model.Report) {
