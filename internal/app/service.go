@@ -2,6 +2,7 @@ package app
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"sort"
 	"strings"
@@ -9,6 +10,7 @@ import (
 	"time"
 
 	"diggo/internal/model"
+	"diggo/internal/rdap"
 
 	"github.com/miekg/dns"
 	"golang.org/x/net/publicsuffix"
@@ -48,10 +50,13 @@ func (s *Service) BuildReport(ctx context.Context, input string, noRDAP bool) (*
 
 	if !noRDAP {
 		rdapInfo, err := s.rdap.LookupDomain(ctx, domain)
-		if err != nil {
-			r.RDAPError = true
-		} else {
+		switch {
+		case err == nil:
 			r.RDAP = rdapInfo
+		case errors.Is(err, rdap.ErrNotAvailable):
+			r.RDAPUnavailable = true
+		default:
+			r.RDAPError = true
 		}
 	}
 

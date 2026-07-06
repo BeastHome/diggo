@@ -57,8 +57,9 @@ type Report struct {
 	CAARecords   []string
 	NoCAA        bool
 
-	RDAP      *RDAPInfo
-	RDAPError bool
+	RDAP            *RDAPInfo
+	RDAPError       bool
+	RDAPUnavailable bool
 
 	GeneratedAt time.Time
 }

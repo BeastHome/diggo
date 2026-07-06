@@ -36,3 +36,4 @@ This document defines the intended human-readable output structure for diggo.
 - Duplicate records are removed from output lists.
 - DMARC records are queried from _dmarc.<domain> TXT.
 - Color formatting is optional and should not change textual content semantics.
+- RDAP has three outcomes: data present, unavailable (no RDAP service for the TLD or unregistered domain), and failed (transient error). Unavailable is rendered as a warning, failed as an error.

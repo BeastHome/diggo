@@ -111,6 +111,17 @@ func TestPrintReport_RDAPErrorGolden(t *testing.T) {
 	assertGolden(t, "rdap_error.golden", got)
 }
 
+func TestPrintReport_RDAPUnavailableGolden(t *testing.T) {
+	report := &model.Report{
+		Domain:          "example.com",
+		RDAPUnavailable: true,
+		NoCAA:           true,
+	}
+
+	got := capturePrintReport(t, report, false)
+	assertGolden(t, "rdap_unavailable.golden", got)
+}
+
 func TestPrintReport_CoreNameserversStacked(t *testing.T) {
 	report := &model.Report{
 		Domain: "example.com",

@@ -45,6 +45,11 @@ This document captures behavior choices for diggo and the rationale behind them.
 - Status: accepted
 - Decision: RDAP lookup failure sets report flags but does not stop DNS sections.
 - Rationale: DNS inspection remains useful even when RDAP endpoint fails.
+- Note: A 404 response (no RDAP service for the TLD, common for ccTLDs such as
+  `.tr`, or an unregistered domain) is reported as "unavailable"
+  (`RDAPUnavailable`) rather than a transient failure (`RDAPError`), so the
+  distinction between a permanent gap and a retryable error is preserved in both
+  text and JSON output.
 
 ## SD-009: Human and machine output are first-class modes
 - Status: accepted

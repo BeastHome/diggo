@@ -131,6 +131,10 @@ func (p *Printer) printReport(r *model.Report, includeCore bool) {
 		p.header("RDAP:")
 		fmt.Fprintln(p.w, p.style(styleError, " RDAP lookup failed."))
 		fmt.Fprintln(p.w)
+	} else if r.RDAPUnavailable {
+		p.header("RDAP:")
+		fmt.Fprintln(p.w, p.style(styleWarn, " No RDAP data available (TLD may not support RDAP, or domain is unregistered)."))
+		fmt.Fprintln(p.w)
 	} else if r.RDAP != nil {
 		p.header("RDAP:")
 		fmt.Fprintln(p.w, " Domain:", r.RDAP.Domain)

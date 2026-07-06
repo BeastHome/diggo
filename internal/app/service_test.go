@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"diggo/internal/model"
+	"diggo/internal/rdap"
 
 	"github.com/miekg/dns"
 )
@@ -229,6 +230,34 @@ func TestBuildReport_SetsRDAPErrorOnFailure(t *testing.T) {
 	}
 	if report.RDAP != nil {
 		t.Fatalf("expected RDAP=nil on rdap failure")
+	}
+}
+
+func TestBuildReport_SetsRDAPUnavailableOnNotFound(t *testing.T) {
+	dnsMock := &fakeDNS{responses: map[string]dnsResponse{
+		dnsKey("example.com", dns.TypeA):          {msg: msgWithAnswers()},
+		dnsKey("example.com", dns.TypeSOA):        {msg: msgWithAnswers()},
+		dnsKey("example.com", dns.TypeNS):         {msg: msgWithAnswers()},
+		dnsKey("example.com", dns.TypeMX):         {msg: msgWithAnswers()},
+		dnsKey("example.com", dns.TypeTXT):        {msg: msgWithAnswers()},
+		dnsKey("_dmarc.example.com", dns.TypeTXT): {msg: msgWithAnswers()},
+		dnsKey("example.com", dns.TypeCAA):        {msg: msgWithAnswers()},
+	}}
+	rdapMock := &fakeRDAP{err: rdap.ErrNotAvailable}
+	svc := NewService(dnsMock, rdapMock)
+
+	report, err := svc.BuildReport(context.Background(), "example.com", false)
+	if err != nil {
+		t.Fatalf("BuildReport returned error: %v", err)
+	}
+	if !report.RDAPUnavailable {
+		t.Fatalf("expected RDAPUnavailable=true when RDAP returns ErrNotAvailable")
+	}
+	if report.RDAPError {
+		t.Fatalf("expected RDAPError=false for a not-available response")
+	}
+	if report.RDAP != nil {
+		t.Fatalf("expected RDAP=nil when data is unavailable")
 	}
 }
 

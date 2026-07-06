@@ -3,6 +3,7 @@ package rdap
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"time"
@@ -11,6 +12,13 @@ import (
 )
 
 const defaultBaseURL = "https://rdap.org"
+
+// ErrNotAvailable indicates the RDAP service returned no data for the domain
+// (HTTP 404). This is typically permanent rather than transient: the TLD
+// publishes no RDAP endpoint (common for many ccTLDs such as .tr) or the
+// domain is unregistered. Callers can distinguish it from timeouts, 5xx
+// responses, and other transient failures.
+var ErrNotAvailable = errors.New("rdap: no data available for domain")
 
 type Client struct {
 	httpClient *http.Client
@@ -48,6 +56,9 @@ func (c *Client) LookupDomain(ctx context.Context, domain string) (*model.RDAPIn
 	}
 	defer resp.Body.Close()
 
+	if resp.StatusCode == http.StatusNotFound {
+		return nil, ErrNotAvailable
+	}
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("rdap lookup failed: status %d", resp.StatusCode)
 	}
